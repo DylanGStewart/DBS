@@ -1,0 +1,5 @@
+Package: DBS
+Type: Package
+Title: Collar Video File Organization and Mortality Date Estimation
+Version: 0.0.1.0
+RoxygenNote: 7.2.3
