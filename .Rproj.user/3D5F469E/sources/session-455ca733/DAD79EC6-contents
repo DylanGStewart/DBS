@@ -1,0 +1,18 @@
+list.of.packages <- c("remotes","tidyverse")
+new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
+if(length(new.packages)) install.packages(new.packages)
+library(remotes)
+library(tidyverse)
+
+remotes::install_github("DylanGStewart/DBS")
+library(DBS)
+?DBSvideo
+
+DBSmort(id = 39971,
+        date = '2023-02-10T00:00:01',
+        removed = '2023-02-15T21:01:39',
+        zeta = 30,
+        eta = 2,
+        theta = 6,
+        filepath = "E:\\Texas A&M\\DBS Mexico\\metadata files\\metadata.xlsx",
+        keypath = "E:\\Texas A&M\\DBS Mexico\\Vectronic Key Files")  #' theta is in hours!

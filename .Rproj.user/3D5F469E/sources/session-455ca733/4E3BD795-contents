@@ -1,0 +1,34 @@
+#' CREATING DBS PACKAGE
+
+#' HELP DOCUMENT
+#' https://ourcodingclub.github.io/tutorials/writing-r-package/
+
+library('devtools')
+library('roxygen2')
+library('devtools')
+
+#' create folder and label the new package name
+#' create subfolder and label "R"
+#' copy and paste the template "DESCRIPTION" file from the Practice Code Folder into the folder with the new package name, not into the "R" folder
+#' add the R code script with a single function into the "R" folder and labeled the script the name of the function
+#' open the DESCRIPTION file as a .txt file, change the names and descriptions, and save
+#' File -> New Project -> Existing Directory -> Select the package file -> Create Project
+#' you should see the R folder with code, .Rproj.user file, .Rbuildignore file, R project with package name, and DESCRIPTION file
+#' next, add annotations to code which will be converted into an R markdown file and eventually used for the help function and package documentation
+#' example provided in Instructions document
+#' once updated, save code back within the R folder
+#' run the next two lines of code which will create the help documentation
+
+library(roxygen2)
+roxygenise()
+
+#' HELP DOCUMENT
+#' https://www.theserverside.com/blog/Coffee-Talk-Java-News-Stories-and-Opinions/How-to-push-an-existing-project-to-GitHub
+
+#' go to the repositories folder
+#' create a folder for the package, label the package name, left click inside the new folder, open in terminal
+#' make sure you have created the repository in github
+#' in your repository on github, click code, then HTTPS, copy the URL
+#' go back to the terminal, type "git clone" then copy and paste the URL
+#' type "git add ." then "git push origin"
+#' you may have to add "git config --global --add safe.directory 'E:/Texas A&M/DBS Mexico/R Packages/repositories/DBS/DBS'" it doesn't trust my external memory
