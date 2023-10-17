@@ -16,11 +16,12 @@
 #'          zeta = 30,
 #'          eta = 2,
 #'          theta = 6,
+#'          reason = "cougar",
 #'          filepath = "E:\\Texas A&M\\DBS Mexico\\metadata files\\metadata.xlsx",
 #'          keypath = "E:\\Texas A&M\\DBS Mexico\\Vectronic Key Files")  #' theta is in hours!
 #' @author Dylan Stewart, Ph.D. student, Texas A&M University, dylan.stewart@tamu.edu
 #' @export
-DBSmort <- function(id, date, removed, zeta, eta, theta, filepath, keypath){ 
+DBSmort <- function(id, date, removed, zeta, eta, theta, reason, filepath, keypath){ 
   #' packages
   required_packages <- c("adehabitatLT","amt","mapview",'openxlsx',"readxl","remotes","sf","tidyverse") 
   lapply(required_packages, require, character.only = TRUE)
@@ -52,7 +53,7 @@ DBSmort <- function(id, date, removed, zeta, eta, theta, filepath, keypath){
   individual = as.data.frame(spTransform(individual, CRS("+proj=utm +zone=12 +datum=NAD83 +units=m +no_defs"))) %>%
     rename(longitude = coords.x1, latitude = coords.x2)
   track = make_track(individual, longitude, latitude, acquisitiontime) 
-  check = flag_defunct_clusters(track, as.numeric(30), as.numeric(2), (lubridate::period(as.numeric(6),"hours")))
+  check = flag_defunct_clusters(track, zeta, eta, (lubridate::period(as.numeric(theta),"hours")))
   lastlivefix = as.data.frame(as.data.frame(check) %>% filter(defunct_cluster_ %in% FALSE) %>%
                                 group_by(defunct_cluster_) %>% filter(t_ != max(t_)) %>% arrange(desc(t_)) %>% slice(1))
   points = check %>% rename (zerolength = defunct_cluster_) %>%
@@ -64,10 +65,15 @@ DBSmort <- function(id, date, removed, zeta, eta, theta, filepath, keypath){
   postmortemcluster = check %>% filter(defunct_cluster_ %in% TRUE) %>%
     st_as_sf(coords = c("x_", "y_"), crs="+proj=utm +zone=12 +datum=NAD83 +units=m +no_defs") %>%
     summarise(do_union = FALSE) %>% st_cast("LINESTRING") 
-  lastpoint = individual %>% filter(acquisitiontime %in% lastlivefix[1,3]) %>%
-    st_as_sf(coords = c("longitude", "latitude"), crs="+proj=utm +zone=12 +datum=NAD83 +units=m +no_defs") 
-  map = points + mapview(lastpoint, alpha.regions = 4, col.regions = "purple", color = "black", cex = 6) + mapview(deermovementpath, color = "darkgreen") + mapview(postmortemcluster, color = "red")
-  print(map)
+  if(lastlivefix[1,3] %in% NA){
+    map = points + mapview(deermovementpath, color = "darkgreen") + mapview(postmortemcluster, color = "red")
+    print(map)
+  }else{
+    lastpoint = individual %>% filter(acquisitiontime %in% lastlivefix[1,3]) %>%
+      st_as_sf(coords = c("longitude", "latitude"), crs="+proj=utm +zone=12 +datum=NAD83 +units=m +no_defs") 
+    map = points + mapview(lastpoint, alpha.regions = 4, col.regions = "purple", color = "black", cex = 6) + mapview(deermovementpath, color = "darkgreen") + mapview(postmortemcluster, color = "red")
+    print(map)
+  }
   message = readline(prompt="Check and see if the map looks accurate if so type [accurate] if not type [notaccurate] to exit")
   message = as.character(message)
   if(message == "[accurate]"){
@@ -76,6 +82,7 @@ DBSmort <- function(id, date, removed, zeta, eta, theta, filepath, keypath){
       mutate(zeta_m = ifelse(collarid == id, zeta ,zeta_m)) %>%
       mutate(eta_fixes = ifelse(collarid == id, eta ,eta_fixes)) %>%
       mutate(theta_hr = ifelse(collarid == id, theta ,theta_hr)) %>%
+      mutate(cause = ifelse(collarid == id, reason ,cause)) %>%
       mutate(lastfixoutsidemortclust_UTC = as.POSIXct(lastfixoutsidemortclust_UTC, format = '%Y-%m-%d %H:%M:%S', tz = 'UTC'))
     message = readline(prompt="Did you remove fixes following mortality and need to document them [yes] or [no]")
     message = as.character(message)
