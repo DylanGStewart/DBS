@@ -27,14 +27,15 @@ DBSmort(id, date, removed, zeta, eta, theta, filepath, keypath)
 This package and the functions within were developed to assist collaborators on the Sonora Mexico desert bighorn sheep project identify defunct clusters and accurately predict mortality and/or dropped collar dates. The package relies on functions in the amt package that can be adjusted to better identify defunct clusters. The user can also specify if sections of location data should be ignored. For example, collars are often recovered and powered off hours to weeks post-recovery. This can create secondary clusters that traditional tools are unable to account for. This package allows the user to filter out these clusters to better identify true defunct clusters. The user can select the option to have the updated metadata file output in CSV format. A new folder will be created in the directory that contains the original metadata. Additionally, the user will select prompts within the code to better tailor the tool to the specific project. Lastly, an interactive map is displayed with live fixes, defunct cluster fixes, movement path, and a predicted final live fix to allow the user to confirm the validity of the predicted dates before data is extracted. The function is specifically designed to pull location data from the API using Vectronic collar keys. As such, all time stamps are in UTC+0.
 }
 \examples{
-DBSmort(id = 39971,
-         date = '2023-02-10T00:00:01',
-         removed = '2023-02-15T21:01:39',
-         zeta = 30,
-         eta = 2,
-         theta = 6,
-         filepath = "E:\\\\Texas A&M\\\\DBS Mexico\\\\metadata files\\\\metadata.xlsx",
-         keypath = "E:\\\\Texas A&M\\\\DBS Mexico\\\\Vectronic Key Files")  #' theta is in hours!
+DBSmort(id = 39966,
+        date = '2024-01-28T15:00:38',
+        removed = '2024-02-15T21:01:39',
+        zeta = 30,
+        eta = 2,
+        theta = 6,
+        reason = "cougar",
+        filepath = "C:\\Users\\Dylan\\OneDrive\\Texas A&M\\DBS Mexico\\metadata files\\metadata_updated.xlsx",
+        keypath = "C:\\Users\\Dylan\\OneDrive\\Texas A&M\\DBS Mexico\\Vectronic Key Files")  #' theta is in hours!
 }
 \author{
 Dylan Stewart, Ph.D. student, Texas A&M University, dylan.stewart@tamu.edu
