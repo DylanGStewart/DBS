@@ -1,0 +1,89 @@
+#' GPS Error Estimation
+#'
+#' @param id                   numeric. A specific collar id number. The user must select an individual.
+#' @param filepath             File path to the locally stored metadata. The user must specify a file path.
+#' @param keypath              File path to the locally stored Vectronic collar keys. Folder should only contain keys of deployed collars. The user must specify a file path.
+#' @examples 
+#' GPSerror(id = 39966,
+#'          filepath = "C:\\Users\\Dylan\\OneDrive\\Texas A&M\\DBS Mexico\\metadata files\\metadata_updated.xlsx",
+#'          keypath = "C:\\Users\\Dylan\\OneDrive\\Texas A&M\\DBS Mexico\\Vectronic Key Files")  #' theta is in hours!
+#' @author Dylan Stewart, Ph.D. student, Texas A&M University, dylan.stewart@tamu.edu
+#' @export
+GPSerror <- function(id, filepath, keypath){ 
+  #' packages
+  required_packages <- c("adehabitatLT","amt","mapview",'openxlsx',"readxl","remotes","sf","tidyverse") 
+  lapply(required_packages, require, character.only = TRUE)
+  list.of.packages <- c("adehabitatLT","amt","mapview",'openxlsx',"readxl","remotes","sf","tidyverse")
+  new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
+  if(length(new.packages)) install.packages(new.packages)
+  suppressWarnings({update.packages(oldPkgs = list.of.packages, ask = FALSE)})
+  if(suppressWarnings({collarinstall = require("collar")}) == FALSE){
+    remotes::install_github("Huh/CollaR")
+    library(collar)
+  }else{
+    library(collar)
+  }
+  required_packages <- c("adehabitatLT","amt","mapview",'openxlsx',"readxl","remotes","sf","tidyverse")
+  lapply(required_packages, require, character.only = TRUE)
+message = readline(prompt="Pre-deployment GPS error [PRE] or Post-deployment GPS error [POST]")
+message = as.character(message)  
+if(message == "[POST]"){
+metadata = read_excel(filepath) %>% mutate(collarid = as.numeric(collarid))
+keyfile = data.frame(keyfile = get_paths(file.path(keypath))) %>% filter(str_detect(keyfile, as.character(id)))
+DBSdata = suppressMessages(fetch_vectronics(keyfile[1,1], start_date = "2000-01-01T00:00:01", which_date = "acquisition")) %>% mutate(idcollar = as.numeric(idcollar)) %>% 
+  mutate(acquisitiontime = as.POSIXct(acquisitiontime, format = '%Y-%m-%dT%H:%M:%S', tz = 'UTC')) %>%
+  left_join(metadata, by = c('idcollar' = 'collarid')) %>%
+  filter(acquisitiontime >= as.POSIXct(firstfixinendclust, format = '%Y-%m-%dT%H:%M:%S', tz = 'UTC') & acquisitiontime <= as.POSIXct(lastfixinendclust, format = '%Y-%m-%dT%H:%M:%S', tz = 'UTC')) %>% arrange(acquisitiontime) %>%
+  filter(!longitude %in% NA | !latitude %in% NA) 
+meancoords = DBSdata %>% group_by(animalid) %>% summarize(meanlong = mean(longitude), meanlat = mean(latitude))
+DBSdata = DBSdata %>% left_join(meancoords, by = 'animalid') 
+DBSdata2 = DBSdata %>% st_as_sf(coords = c("longitude", "latitude"), crs="+proj=longlat +datum=NAD83 +units=m +no_defs")
+DBSdata3 = DBSdata %>% st_as_sf(coords = c("meanlong", "meanlat"), crs="+proj=longlat +datum=NAD83 +units=m +no_defs")
+df = data.frame(st_distance(DBSdata3, DBSdata2, by_element = TRUE)) %>%
+  rename(diffm = st_distance.DBSdata3..DBSdata2..by_element...TRUE.) %>%
+  mutate(diffm =  as.numeric(diffm))
+DBSdata3 = DBSdata3 %>% add_column(df)
+suppressMessages(suppressWarnings(library(Rmisc)))
+output = summarySE(data = DBSdata3, measurevar = "diffm", groupvars = c("idcollar"), conf.interval = 0.95)
+suppressMessages(suppressWarnings(detach(package:Rmisc,unload=TRUE))) #' detach packages, load tidyverse again
+suppressMessages(suppressWarnings(detach(package:plyr,unload=TRUE)))
+output = output %>% mutate(diffm = round(diffm, digits = 2), sd = round(sd, digits = 2), se = round(se, digits = 2), ci = round(ci,digits = 2))
+metadata = metadata %>% 
+  mutate(clustN = ifelse(collarid == id, output$N,clustN)) %>%
+  mutate(clustdiffm = ifelse(collarid == id, output$diffm,clustdiffm)) %>%
+  mutate(clustsd = ifelse(collarid == id, output$sd,clustsd)) %>%
+  mutate(clustse = ifelse(collarid == id, output$se,clustse)) %>%
+  mutate(clustci = ifelse(collarid == id, output$ci,clustci))
+dir.create(path = paste0(gsub("metadata_updated.xlsx", "GPSerror outputs",filepath)))
+openxlsx::write.xlsx(metadata,paste0(gsub("metadata_updated.xlsx", "GPSerror outputs",filepath), '\\metadata.xlsx'), keepNA = FALSE)
+}else{
+metadata = read_excel(filepath) %>% mutate(collarid = as.numeric(collarid))
+keyfile = data.frame(keyfile = get_paths(file.path(keypath))) %>% filter(str_detect(keyfile, as.character(id)))
+DBSdata = suppressMessages(fetch_vectronics(keyfile[1,1], start_date = "2000-01-01T00:00:01", which_date = "acquisition")) %>% mutate(idcollar = as.numeric(idcollar)) %>% 
+  mutate(acquisitiontime = as.POSIXct(acquisitiontime, format = '%Y-%m-%dT%H:%M:%S', tz = 'UTC')) %>%
+  left_join(metadata, by = c('idcollar' = 'collarid')) %>%
+  filter(acquisitiontime >= as.POSIXct(starttestingdate, format = '%Y-%m-%dT%H:%M:%S', tz = 'UTC') & acquisitiontime <= as.POSIXct(endtestingdate, format = '%Y-%m-%dT%H:%M:%S', tz = 'UTC')) %>% arrange(acquisitiontime) %>%
+  filter(!longitude %in% NA | !latitude %in% NA) 
+meancoords = DBSdata %>% group_by(animalid) %>% summarize(meanlong = mean(longitude), meanlat = mean(latitude))
+DBSdata = DBSdata %>% left_join(meancoords, by = 'animalid') 
+DBSdata2 = DBSdata %>% st_as_sf(coords = c("longitude", "latitude"), crs="+proj=longlat +datum=NAD83 +units=m +no_defs")
+DBSdata3 = DBSdata %>% st_as_sf(coords = c("meanlong", "meanlat"), crs="+proj=longlat +datum=NAD83 +units=m +no_defs")
+df = data.frame(st_distance(DBSdata3, DBSdata2, by_element = TRUE)) %>%
+  rename(diffm = st_distance.DBSdata3..DBSdata2..by_element...TRUE.) %>%
+  mutate(diffm =  as.numeric(diffm))
+DBSdata3 = DBSdata3 %>% add_column(df)
+suppressMessages(suppressWarnings(library(Rmisc)))
+output = summarySE(data = DBSdata3, measurevar = "diffm", groupvars = c("idcollar"), conf.interval = 0.95)
+suppressMessages(suppressWarnings(detach(package:Rmisc,unload=TRUE))) #' detach packages, load tidyverse again
+suppressMessages(suppressWarnings(detach(package:plyr,unload=TRUE))) 
+output = output %>% mutate(diffm = round(diffm, digits = 2), sd = round(sd, digits = 2), se = round(se, digits = 2), ci = round(ci,digits = 2))
+metadata = metadata %>% 
+  mutate(testingN = ifelse(collarid == id, output$N,testingN)) %>%
+  mutate(testingdiffm = ifelse(collarid == id, output$diffm,testingdiffm)) %>%
+  mutate(testingsd = ifelse(collarid == id, output$sd,testingsd)) %>%
+  mutate(testingse = ifelse(collarid == id, output$se,testingse)) %>%
+  mutate(testingci = ifelse(collarid == id, output$ci,testingci))
+dir.create(path = paste0(gsub("metadata_updated.xlsx", "GPSerror outputs",filepath)))
+openxlsx::write.xlsx(metadata,paste0(gsub("metadata_updated.xlsx", "GPSerror outputs",filepath), '\\metadata.xlsx'), keepNA = FALSE)
+}
+} 
